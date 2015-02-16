@@ -1,0 +1,9 @@
+// Edit this template and save to output_sel.v
+
+// Enable debug output through JP4 connector.
+//`define DEBUG
+
+// Main output selection.
+// It is possible to select both, but this may hamper achieving timing closure.
+`define OUTPUT_HDMI
+//`define OUTPUT_VGA
