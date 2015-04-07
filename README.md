@@ -58,13 +58,14 @@ Build instructions
 --------------------------
 1. Edit rtl/output_sel.v.example to suit your setup, and save the modified file into rtl/output_sel.v
 2. Load the project (videoproc.qpf) in Quartus II
-3. Generate the FPGA bitstream (Processing -> Start Compilation)
-4. Program the bitstream into the FPGA using either JTAG (volatile/.sof) or AS programming (nonvolatile/.pof) method
+3. Generate Qsys system files (Tools -> Qsys. Open sys.qsys -> Generate -> Generate HDL)
+4. Generate the FPGA bitstream (Quartus window -> Processing -> Start Compilation)
+5. Program the bitstream into the FPGA using either JTAG (volatile/.sof) or AS programming (nonvolatile/.pof) method
 
 
 Usage
 --------------------------
-After programming the FPGA, the character LCD should display "INIT OK" if the connection between the boards is operational.
+Before turning on the power, set jumpers JP7 and JP8 on the DE2-115 development board into 3.3V position. After programming the FPGA, the character LCD and 7-segment LEDs should display "OSSC" if the connection between the boards is operational.
 
 
 ### Input selection ###

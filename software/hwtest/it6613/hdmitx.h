@@ -50,7 +50,9 @@
 #define TRUE 1
 #define FALSE 0*/
 //#define NULL 0
-typedef unsigned char bool;
+
+//typedef unsigned char bool;
+#include "Altera_UP_SD_Card_Avalon_Interface.h"
 
 #ifndef DEBUG
 #define OS_PRINTF(...)

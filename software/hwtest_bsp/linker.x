@@ -4,7 +4,7 @@
  * Machine generated for CPU 'nios2_qsys_0' in SOPC Builder design 'sys'
  * SOPC Builder design path: ../../sys.sopcinfo
  *
- * Generated: Sat Nov 08 20:52:52 EET 2014
+ * Generated: Tue Apr 07 22:22:13 EEST 2015
  */
 
 /*
@@ -50,12 +50,14 @@
 
 MEMORY
 {
-    reset : ORIGIN = 0x40000, LENGTH = 32
-    onchip_memory2_0 : ORIGIN = 0x40020, LENGTH = 262112
+    epcq_controller_0_avl_mem : ORIGIN = 0x0, LENGTH = 8388608
+    reset : ORIGIN = 0x810000, LENGTH = 32
+    onchip_memory2_0 : ORIGIN = 0x810020, LENGTH = 65504
 }
 
 /* Define symbols for each memory base-address */
-__alt_mem_onchip_memory2_0 = 0x40000;
+__alt_mem_epcq_controller_0_avl_mem = 0x0;
+__alt_mem_onchip_memory2_0 = 0x810000;
 
 OUTPUT_FORMAT( "elf32-littlenios2",
                "elf32-littlenios2",
@@ -307,7 +309,24 @@ SECTIONS
      *
      */
 
-    .onchip_memory2_0 LOADADDR (.bss) + SIZEOF (.bss) : AT ( LOADADDR (.bss) + SIZEOF (.bss) )
+    .epcq_controller_0_avl_mem : AT ( LOADADDR (.bss) + SIZEOF (.bss) )
+    {
+        PROVIDE (_alt_partition_epcq_controller_0_avl_mem_start = ABSOLUTE(.));
+        *(.epcq_controller_0_avl_mem .epcq_controller_0_avl_mem. epcq_controller_0_avl_mem.*)
+        . = ALIGN(4);
+        PROVIDE (_alt_partition_epcq_controller_0_avl_mem_end = ABSOLUTE(.));
+    } > epcq_controller_0_avl_mem
+
+    PROVIDE (_alt_partition_epcq_controller_0_avl_mem_load_addr = LOADADDR(.epcq_controller_0_avl_mem));
+
+    /*
+     *
+     * This section's LMA is set to the .text region.
+     * crt0 will copy to this section's specified mapped region virtual memory address (VMA)
+     *
+     */
+
+    .onchip_memory2_0 LOADADDR (.epcq_controller_0_avl_mem) + SIZEOF (.epcq_controller_0_avl_mem) : AT ( LOADADDR (.epcq_controller_0_avl_mem) + SIZEOF (.epcq_controller_0_avl_mem) )
     {
         PROVIDE (_alt_partition_onchip_memory2_0_start = ABSOLUTE(.));
         *(.onchip_memory2_0 .onchip_memory2_0. onchip_memory2_0.*)
@@ -367,7 +386,7 @@ SECTIONS
 /*
  * Don't override this, override the __alt_stack_* symbols instead.
  */
-__alt_data_end = 0x80000;
+__alt_data_end = 0x820000;
 
 /*
  * The next two symbols define the location of the default stack.  You can
@@ -383,4 +402,4 @@ PROVIDE( __alt_stack_limit   = __alt_stack_base );
  * Override this symbol to put the heap in a different memory.
  */
 PROVIDE( __alt_heap_start    = end );
-PROVIDE( __alt_heap_limit    = 0x80000 );
+PROVIDE( __alt_heap_limit    = 0x820000 );

@@ -85,4 +85,4 @@ LibName27=opto
 LibName28=atmel
 LibName29=contrib
 LibName30=valves
-LibName31=/home/markus/Code/videoproc/pcb/custom_components
+LibName31=./custom_components

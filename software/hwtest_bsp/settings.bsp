@@ -2,8 +2,8 @@
 <sch:Settings xmlns:sch="http://www.altera.com/embeddedsw/bsp/schema">
         <BspType>hal</BspType>
         <BspVersion>default</BspVersion>
-        <BspGeneratedTimeStamp>Feb 10, 2015 8:23:25 PM</BspGeneratedTimeStamp>
-        <BspGeneratedUnixTimeStamp>1423592605588</BspGeneratedUnixTimeStamp>
+        <BspGeneratedTimeStamp>Apr 7, 2015 10:23:48 PM</BspGeneratedTimeStamp>
+        <BspGeneratedUnixTimeStamp>1428434628041</BspGeneratedUnixTimeStamp>
         <BspGeneratedLocation>/home/markus/Code/videoproc/software/hwtest_bsp</BspGeneratedLocation>
         <BspSettingsFile>settings.bsp</BspSettingsFile>
         <SopcDesignFile>../../sys.sopcinfo</SopcDesignFile>
@@ -314,7 +314,7 @@
                 <SettingName>hal.make.bsp_cflags_debug</SettingName>
                 <Identifier>BSP_CFLAGS_DEBUG</Identifier>
                 <Type>UnquotedString</Type>
-                <Value>-g</Value>
+                <Value>none</Value>
                 <DefaultValue>-g</DefaultValue>
                 <DestinationFile>makefile_variable</DestinationFile>
                 <Description>C/C++ compiler debug level. '-g' provides the default set of debug symbols typically required to debug a typical application. Omitting '-g' removes debug symbols from the ELF. This setting defines the value of BSP_CFLAGS_DEBUG in Makefile.</Description>
@@ -386,7 +386,7 @@
                 <SettingName>hal.make.bsp_cflags_optimization</SettingName>
                 <Identifier>BSP_CFLAGS_OPTIMIZATION</Identifier>
                 <Type>UnquotedString</Type>
-                <Value>-O0</Value>
+                <Value>-Os</Value>
                 <DefaultValue>-O0</DefaultValue>
                 <DestinationFile>makefile_variable</DestinationFile>
                 <Description>C/C++ compiler optimization level. "-O0" = no optimization,"-O2" = "normal" optimization, etc. "-O0" is recommended for code that you want to debug since compiler optimization can remove variables and produce non-sequential execution of code while debugging. This setting defines the value of BSP_CFLAGS_OPTIMIZATION in Makefile.</Description>
@@ -722,7 +722,7 @@
                 <SettingName>hal.enable_small_c_library</SettingName>
                 <Identifier>NONE</Identifier>
                 <Type>Boolean</Type>
-                <Value>0</Value>
+                <Value>1</Value>
                 <DefaultValue>0</DefaultValue>
                 <DestinationFile>public_mk_define</DestinationFile>
                 <Description>Causes the small newlib (C library) to be used. This reduces code and data footprint at the expense of reduced functionality. Several newlib features are removed such as floating-point support in printf(), stdin input routines, and buffered I/O. The small C library is not compatible with Micrium MicroC/OS-II. If true, adds -msmallc to ALT_LDFLAGS in public.mk.</Description>
@@ -770,7 +770,7 @@
                 <SettingName>hal.enable_c_plus_plus</SettingName>
                 <Identifier>ALT_NO_C_PLUS_PLUS</Identifier>
                 <Type>Boolean</Type>
-                <Value>1</Value>
+                <Value>0</Value>
                 <DefaultValue>1</DefaultValue>
                 <DestinationFile>public_mk_define</DestinationFile>
                 <Description>Enable support for a subset of the C++ language. This option increases code footprint by adding support for C++ constructors. Certain features, such as multiple inheritance and exceptions are not supported. If false, adds -DALT_NO_C_PLUS_PLUS to ALT_CPPFLAGS in public.mk, and reduces code footprint.</Description>
@@ -887,68 +887,86 @@
                 <Group xsi:nil="true" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"/>
         </Setting>
         <MemoryMap>
+                <slaveDescriptor>epcq_controller_0_avl_mem</slaveDescriptor>
+                <addressRange>0x00000000 - 0x007FFFFF</addressRange>
+                <addressSpan>8388608</addressSpan>
+                <attributes>flash, memory, non-volatile</attributes>
+        </MemoryMap>
+        <MemoryMap>
                 <slaveDescriptor>onchip_memory2_0</slaveDescriptor>
-                <addressRange>0x00040000 - 0x0007FFFF</addressRange>
-                <addressSpan>262144</addressSpan>
+                <addressRange>0x00810000 - 0x0081FFFF</addressRange>
+                <addressSpan>65536</addressSpan>
                 <attributes>memory</attributes>
         </MemoryMap>
         <MemoryMap>
+                <slaveDescriptor>Altera_UP_SD_Card_Avalon_Interface_0</slaveDescriptor>
+                <addressRange>0x00821000 - 0x008213FF</addressRange>
+                <addressSpan>1024</addressSpan>
+                <attributes/>
+        </MemoryMap>
+        <MemoryMap>
+                <slaveDescriptor>epcq_controller_0_avl_csr</slaveDescriptor>
+                <addressRange>0x00821400 - 0x0082141F</addressRange>
+                <addressSpan>32</addressSpan>
+                <attributes/>
+        </MemoryMap>
+        <MemoryMap>
                 <slaveDescriptor>i2c_opencores_1</slaveDescriptor>
-                <addressRange>0x00081000 - 0x0008101F</addressRange>
+                <addressRange>0x00821420 - 0x0082143F</addressRange>
                 <addressSpan>32</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>i2c_opencores_0</slaveDescriptor>
-                <addressRange>0x00081020 - 0x0008103F</addressRange>
+                <addressRange>0x00821440 - 0x0082145F</addressRange>
                 <addressSpan>32</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>pio_5</slaveDescriptor>
-                <addressRange>0x00081040 - 0x0008104F</addressRange>
+                <addressRange>0x00821460 - 0x0082146F</addressRange>
                 <addressSpan>16</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>pio_4</slaveDescriptor>
-                <addressRange>0x00081050 - 0x0008105F</addressRange>
+                <addressRange>0x00821470 - 0x0082147F</addressRange>
                 <addressSpan>16</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>pio_3</slaveDescriptor>
-                <addressRange>0x00081060 - 0x0008106F</addressRange>
+                <addressRange>0x00821480 - 0x0082148F</addressRange>
                 <addressSpan>16</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>pio_2</slaveDescriptor>
-                <addressRange>0x00081070 - 0x0008107F</addressRange>
+                <addressRange>0x00821490 - 0x0082149F</addressRange>
                 <addressSpan>16</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>pio_1</slaveDescriptor>
-                <addressRange>0x00081080 - 0x0008108F</addressRange>
+                <addressRange>0x008214A0 - 0x008214AF</addressRange>
                 <addressSpan>16</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>pio_0</slaveDescriptor>
-                <addressRange>0x00081090 - 0x0008109F</addressRange>
+                <addressRange>0x008214B0 - 0x008214BF</addressRange>
                 <addressSpan>16</addressSpan>
                 <attributes/>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>jtag_uart_0</slaveDescriptor>
-                <addressRange>0x000810A0 - 0x000810A7</addressRange>
+                <addressRange>0x008214C0 - 0x008214C7</addressRange>
                 <addressSpan>8</addressSpan>
                 <attributes>printable</attributes>
         </MemoryMap>
         <MemoryMap>
                 <slaveDescriptor>character_lcd_0</slaveDescriptor>
-                <addressRange>0x000810A8 - 0x000810A9</addressRange>
+                <addressRange>0x008214C8 - 0x008214C9</addressRange>
                 <addressSpan>2</addressSpan>
                 <attributes/>
         </MemoryMap>

@@ -23,6 +23,8 @@
 #include "string.h"
 #include "altera_avalon_pio_regs.h"
 #include "altera_up_avalon_character_lcd.h"
+#include "Altera_UP_SD_Card_Avalon_Interface.h"
+#include "altera_epcq_controller.h"
 #include "i2c_opencores.h"
 #include "tvp7002.h"
 #include "video_modes.h"
@@ -103,9 +105,29 @@ typedef struct {
 avmode_t cm;
 
 alt_up_character_lcd_dev * char_lcd_dev;
+alt_up_sd_card_dev * sdcard_dev;
 
 alt_u8 target_typemask;
 alt_u8 stable_frames;
+
+#define LCD_ROW_LEN 16
+
+char row1[LCD_ROW_LEN+1], row2[LCD_ROW_LEN+1];
+
+void lcd_write() {
+	alt_u8 i;
+
+	// Fill unused space
+	for (i=strlen(row1); i<LCD_ROW_LEN; i++)
+		row1[i] = ' ';
+	for (i=strlen(row2); i<LCD_ROW_LEN; i++)
+		row2[i] = ' ';
+
+	alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 0);
+	alt_up_character_lcd_write(char_lcd_dev, row1, LCD_ROW_LEN);
+	alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 1);
+	alt_up_character_lcd_write(char_lcd_dev, row2, LCD_ROW_LEN);
+}
 
 // Check if input video status / target configuration has changed
 status_t get_status(tvp_input_t input) {
@@ -259,35 +281,35 @@ void set_7seg() {
 // Configure TVP7002 and scan converter logic based on the video mode
 void program_mode() {
 	alt_u32 data1, data2;
-	char row1[20], row2[20];
-	float hz;
+	alt_u32 h_hz, v_hz_x10;
 
 	// Mark as stable (needed after sync up to avoid unnecessary mode switch)
 	stable_frames = STABLE_THOLD;
 
 	if ((cm.clkcnt != 0) && (cm.totlines != 0)) { //prevent div by 0
-		printf("\nLines: %u %c\n", cm.totlines, cm.progressive ? 'p' : 'i');
-		printf("Clocks per line: %u : HS %.2f kHz  VS %.2f Hz\n", cm.clkcnt, (0.001f*clkrate[cm.refclk])/cm.clkcnt, cm.progressive ? (clkrate[cm.refclk]/cm.clkcnt)/cm.totlines : (2*clkrate[cm.refclk]/cm.clkcnt)/cm.totlines);
-
-		data1 = tvp_readreg(TVP_HSINWIDTH);
-		data2 = tvp_readreg(TVP_VSINWIDTH);
-		printf("Hswidth: %u  Vswidth: %u  Macrovision: %u\n", data1, data2 & 0x1F, cm.macrovis);
-
-		snprintf(row1, 17, "%s %u%c   ", avinput_str[cm.avinput], cm.totlines, cm.progressive ? 'p' : 'i');
-		snprintf(row2, 17, "%.1fkHz  %.1fHz   ", (0.001f*clkrate[cm.refclk])/cm.clkcnt, cm.progressive ? (clkrate[cm.refclk]/cm.clkcnt)/cm.totlines : (2*clkrate[cm.refclk]/cm.clkcnt)/cm.totlines);
-		alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 0);
-		alt_up_character_lcd_string(char_lcd_dev, row1);
-		alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 1);
-		alt_up_character_lcd_string(char_lcd_dev, row2);
+		h_hz = clkrate[cm.refclk]/cm.clkcnt;
+		v_hz_x10 = cm.progressive ? (10*clkrate[cm.refclk]/cm.clkcnt)/cm.totlines : (20*clkrate[cm.refclk]/cm.clkcnt)/cm.totlines;
+	} else {
+		h_hz = 15700;
+		v_hz_x10 = 600;
 	}
 
-	if ((cm.clkcnt != 0) && (cm.totlines != 0))
-		hz = cm.progressive ? (clkrate[cm.refclk]/cm.clkcnt)/cm.totlines : (2*clkrate[cm.refclk]/cm.clkcnt)/cm.totlines;
-	else
-		hz = 60.0f;
+	printf("\nLines: %u %c\n", cm.totlines, cm.progressive ? 'p' : 'i');
+	printf("Clocks per line: %u : HS %u.%u kHz  VS %u.%u Hz\n", cm.clkcnt, h_hz/1000, h_hz%1000, v_hz_x10/10, v_hz_x10%10);
+
+	data1 = tvp_readreg(TVP_HSINWIDTH);
+	data2 = tvp_readreg(TVP_VSINWIDTH);
+	printf("Hswidth: %u  Vswidth: %u  Macrovision: %u\n", data1, data2 & 0x1F, cm.macrovis);
+
+	//TODO: rewrite with strncpy to reduce code size
+	snprintf(row1, LCD_ROW_LEN+1, "%s %u%c", avinput_str[cm.avinput], cm.totlines, cm.progressive ? 'p' : 'i');
+	snprintf(row2, LCD_ROW_LEN+1, "%u.%ukHz  %u.%uHz", h_hz/1000, (h_hz%1000)/100, v_hz_x10/10, v_hz_x10%10);
+	//strncpy(row1, avinput_str[cm.avinput], LCD_ROW_LEN);
+	//strncpy(row2, avinput_str[cm.avinput], LCD_ROW_LEN);
+	lcd_write();
 
 	//printf ("Get mode id with %u %u %f\n", totlines, progressive, hz);
-	cm.id = get_mode_id(cm.totlines, cm.progressive, hz, target_typemask, cm.linemult_target, cm.l3_mode);
+	cm.id = get_mode_id(cm.totlines, cm.progressive, v_hz_x10/10, target_typemask, cm.linemult_target, cm.l3_mode);
 
 	if ( cm.id == -1) {
 		printf ("Error: no suitable mode found, defaulting to first\n");
@@ -296,7 +318,7 @@ void program_mode() {
 
 	printf("Mode %s selected\n", video_modes[cm.id].name);
 
-	tvp_source_setup(cm.id, (cm.progressive ? cm.totlines : cm.totlines/2), hz, cm.refclk);
+	tvp_source_setup(cm.id, (cm.progressive ? cm.totlines : cm.totlines/2), v_hz_x10/10, cm.refclk);
 	set_videoinfo();
 }
 
@@ -362,17 +384,13 @@ int main()
 	avinput_t target_mode;
 	alt_u8 av_init = 0;
 	status_t status;
-	char row1[20], row2[20];
 
 	if (init_hw() == 1) {
 		printf("### DIY VIDEO DIGITIZER / SCANCONVERTER INIT OK ###\n\n");
 		IOWR_ALTERA_AVALON_PIO_DATA(PIO_5_BASE, 0xffff055C); //OSSC
-		snprintf(row1, 17, "##### OSSC #####");
-		snprintf(row2, 17, "2014-2015  marqs");
-		alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 0);
-		alt_up_character_lcd_string(char_lcd_dev, row1);
-		alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 1);
-		alt_up_character_lcd_string(char_lcd_dev, row2);
+		strncpy(row1, "##### OSSC #####", LCD_ROW_LEN);
+		strncpy(row2, "2014-2015  marqs", LCD_ROW_LEN);
+		lcd_write();
 	}
 
 	//RESET
@@ -450,12 +468,9 @@ int main()
 			tvp_disable_output();
 			tvp_source_sel(target_input, target_format, cm.refclk);
 			cm.clkcnt = 0; //TODO: proper invalidate
-			snprintf(row1, 17, "%s       ", avinput_str[cm.avinput]);
-			snprintf(row2, 17, "    NO SYNC     ");
-			alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 0);
-			alt_up_character_lcd_string(char_lcd_dev, row1);
-			alt_up_character_lcd_set_cursor_pos(char_lcd_dev, 0, 1);
-			alt_up_character_lcd_string(char_lcd_dev, row2);
+			strncpy(row1, avinput_str[cm.avinput], LCD_ROW_LEN);
+			strncpy(row2, "    NO SYNC", LCD_ROW_LEN);
+			lcd_write();
 		}
 
 		usleep(20000);

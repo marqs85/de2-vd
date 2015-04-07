@@ -44,7 +44,7 @@ typedef enum {
 	REFCLK_INTCLK 	= 1
 } tvp_refclk_t;
 
-static const float clkrate[] = {27000000.0f, 6500000.0f};
+static const alt_u32 clkrate[] = {27000000, 6500000}; //in MHz
 
 
 inline alt_u32 tvp_readreg(alt_u32 regaddr);
@@ -59,11 +59,11 @@ inline void tvp_enable_output();
 
 void tvp_set_globaldefs();
 
-void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, float hz, alt_u8 plldivby2);
+void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, alt_u8 hz, alt_u8 plldivby2);
 
 void tvp_sel_clk(alt_u8 refclk);
 
-void tvp_source_setup(alt_8 modeid, alt_u32 vlines, float hz, alt_u8 refclk);
+void tvp_source_setup(alt_8 modeid, alt_u32 vlines, alt_u8 hz, alt_u8 refclk);
 
 void tvp_source_sel(tvp_input_t input, video_format fmt, alt_u8 refclk);
 

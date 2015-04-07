@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?>
-
-<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<buildSystem id="preference.org.eclipse.cdt.managedbuilder.core.configurationDataProvider.1542359483">
 			<storageModule id="preference.org.eclipse.cdt.managedbuilder.core.configurationDataProvider.1542359483" moduleId="org.eclipse.cdt.core.settings"/>
@@ -273,6 +271,23 @@
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1362957809" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
+							<tool id="altera.tool.gnu.c.compiler.1476174651" name="Nios II GCC C Compiler" superClass="altera.tool.gnu.c.compiler">
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.249907720" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="altera.tool.gnu.cpp.compiler.2088210733" name="Nios II GCC C++ Compiler" superClass="altera.tool.gnu.cpp.compiler">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1213130662" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool id="altera.tool.gnu.archiver.917573547" name="Nios II GCC Archiver" superClass="altera.tool.gnu.archiver"/>
+							<tool id="altera.tool.gnu.c.linker.96553017" name="Nios II GCC C Linker" superClass="altera.tool.gnu.c.linker"/>
+							<tool id="altera.tool.gnu.cpp.linker.1491303100" name="Nios II GCC C++ Linker" superClass="altera.tool.gnu.cpp.linker">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.790057257" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
+							<tool id="altera.tool.gnu.assembler.1548199461" name="Nios II GCC Assembler" superClass="altera.tool.gnu.assembler">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1770808284" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
 						</toolChain>
 					</folderInfo>
 				</configuration>
@@ -323,8 +338,10 @@
 			</profile>
 		</scannerConfigBuildInfo>
 	</storageModule>
-	<storageModule moduleId="refreshScope" versionNumber="1">
-		<resource resourceType="PROJECT" workspacePath="/hwtest"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Nios II">
+			<resource resourceType="PROJECT" workspacePath="/hwtest"/>
+		</configuration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
@@ -345,4 +362,5 @@
 			</target>
 		</buildTargets>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 </cproject>

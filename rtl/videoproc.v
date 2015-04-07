@@ -86,7 +86,11 @@ module videoproc(
 	output [6:0] HEX4,
 	output [6:0] HEX5,
 	output [6:0] HEX6,
-	output [6:0] HEX7
+	output [6:0] HEX7,
+	output SD_CLK,
+	inout SD_CMD,
+	inout [3:0] SD_DAT,
+	inout SD_WP_N
 );
 
 wire [7:0] led_out;
@@ -129,6 +133,10 @@ assign HEX3 = seg_vec[27:21];
 assign HEX2 = seg_vec[20:14];
 assign HEX1 = seg_vec[13:7];
 assign HEX0 = seg_vec[6:0];
+
+assign SD_DAT[1] = 1'b0;
+assign SD_DAT[2] = 1'b0;
+assign SD_WP_N = 1'b1;
 
 assign controls_in = {switch[17:0], button[3:1]};
 assign reset_n = button[0];
@@ -195,7 +203,11 @@ sys sys_inst(
     .character_lcd_0_external_interface_EN   (LCD_EN),   //                                   .EN
     .character_lcd_0_external_interface_RS   (LCD_RS),   //                                   .RS
     .character_lcd_0_external_interface_RW   (LCD_RW),   //                                   .RW
-	.character_lcd_0_external_interface_BLON () 		 //                                   .BLON
+	.character_lcd_0_external_interface_BLON (), 		 //                                   .BLON
+	.sdcard_0_interface_b_SD_cmd             (SD_CMD),    //                 sdcard_0_interface.b_SD_cmd
+	.sdcard_0_interface_b_SD_dat             (SD_DAT[0]), //                                   .b_SD_dat
+	.sdcard_0_interface_b_SD_dat3            (SD_DAT[3]), //                                   .b_SD_dat3
+	.sdcard_0_interface_o_SD_clock           (SD_CLK)     //                                   .o_SD_cloc
 );
 
 scaler scaler_inst (

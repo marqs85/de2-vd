@@ -2,7 +2,7 @@
 
 create_clock -period 50MHz -name clk50 [get_ports clk50]
 
-set_input_delay -clock clk50 0 [get_ports {button* switch* sda scl LCD_DATA* HDMI_TX_PCSDA}]
+set_input_delay -clock clk50 0 [get_ports {button* switch* sda scl LCD_DATA* HDMI_TX_PCSDA SD_* *ALTERA_DATA0}]
 
 
 ### Scaler clock constraints ###

@@ -22,6 +22,7 @@
 #include "system.h"
 #include "altera_avalon_pio_regs.h"
 #include "altera_up_avalon_character_lcd.h"
+#include "Altera_UP_SD_Card_Avalon_Interface.h"
 #include "i2c_opencores.h"
 #include "tvp7002.h"
 
@@ -182,8 +183,8 @@ void tvp_set_globaldefs() {
 }
 
 // Configure H-PLL (sampling rate, VCO gain and charge pump current)
-void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, float hz, alt_u8 plldivby2) {
-	float pclk_est;
+void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, alt_u8 hz, alt_u8 plldivby2) {
+	alt_u32 pclk_est;
 	alt_u8 vco_range;
 	alt_u8 cp_current;
 
@@ -200,21 +201,21 @@ void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, float hz, alt_u8 plld
 
 	printf("Horizontal samplerate set to %u\n", h_samplerate);
 
-	pclk_est = (h_samplerate * v_lines * hz) / 1000000;
+	pclk_est = ((alt_u32)h_samplerate * v_lines * hz) / 1000; //in kHz
 
-	printf("Estimated PCLK: %.2f MHz\n", pclk_est);
+	printf("Estimated PCLK: %u.%u MHz\n", pclk_est/1000, pclk_est%1000);
 
-	if (pclk_est < 36) {
+	if (pclk_est < 36000) {
 		vco_range = 0;
-	} else if (pclk_est < 70) {
+	} else if (pclk_est < 70000) {
 		vco_range = 1;
-	} else if (pclk_est < 135) {
+	} else if (pclk_est < 135000) {
 		vco_range = 2;
 	} else {
 		vco_range = 3;
 	}
 
-	cp_current =  (alt_u8)(40.0f*Kvco[vco_range]/h_samplerate + 0.5f) & 0x7;
+	cp_current = (40*Kvco[vco_range]+h_samplerate/2) / h_samplerate; //"+h_samplerate/2" for fast rounding
 
 	printf("VCO range: %s\nCPC: %u\n", Kvco_str[vco_range], cp_current);
 	tvp_writereg(TVP_HPLLCTRL, ((vco_range << 6) | (cp_current << 3)));
@@ -233,7 +234,7 @@ void tvp_sel_clk(alt_u8 refclk) {
 	}
 }
 
-void tvp_source_setup(alt_8 modeid, alt_u32 vlines, float hz, alt_u8 refclk) {
+void tvp_source_setup(alt_8 modeid, alt_u32 vlines, alt_u8 hz, alt_u8 refclk) {
 	video_type type = video_modes[modeid].type;
 
 	// Configure clock settings

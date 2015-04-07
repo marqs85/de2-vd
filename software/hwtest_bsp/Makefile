@@ -127,18 +127,12 @@ BSP_ARFLAGS = -src
 # BSP_ASFLAGS in Makefile. 
 BSP_ASFLAGS = -Wa,-gdwarf2
 
-# C/C++ compiler debug level. '-g' provides the default set of debug symbols 
-# typically required to debug a typical application. Omitting '-g' removes 
-# debug symbols from the ELF. This setting defines the value of 
-# BSP_CFLAGS_DEBUG in Makefile. 
-BSP_CFLAGS_DEBUG = -g
-
 # C/C++ compiler optimization level. "-O0" = no optimization,"-O2" = "normal" 
 # optimization, etc. "-O0" is recommended for code that you want to debug since 
 # compiler optimization can remove variables and produce non-sequential 
 # execution of code while debugging. This setting defines the value of 
 # BSP_CFLAGS_OPTIMIZATION in Makefile. 
-BSP_CFLAGS_OPTIMIZATION = -O0
+BSP_CFLAGS_OPTIMIZATION = -Os
 
 # C/C++ compiler warning level. "-Wall" is commonly used.This setting defines 
 # the value of BSP_CFLAGS_WARNINGS in Makefile. 
@@ -208,6 +202,13 @@ GENERATED_C_LIB_SRCS += alt_sys_init.c
 # used to build each file.
 #-------------------------------------------------------------------------------
 
+# altera_up_sd_card_avalon_interface_driver sources root 
+Altera_UP_SD_Card_Avalon_Interface_driver_SRCS_ROOT := drivers
+
+# altera_up_sd_card_avalon_interface_driver sources 
+Altera_UP_SD_Card_Avalon_Interface_driver_C_LIB_SRCS := \
+	$(Altera_UP_SD_Card_Avalon_Interface_driver_SRCS_ROOT)/src/Altera_UP_SD_Card_Avalon_Interface.c
+
 # altera_avalon_jtag_uart_driver sources root 
 altera_avalon_jtag_uart_driver_SRCS_ROOT := drivers
 
@@ -223,6 +224,13 @@ altera_avalon_jtag_uart_driver_C_LIB_SRCS := \
 altera_avalon_pio_driver_SRCS_ROOT := drivers
 
 # altera_avalon_pio_driver sources 
+# altera_epcq_controller_driver sources root 
+altera_epcq_controller_driver_SRCS_ROOT := drivers
+
+# altera_epcq_controller_driver sources 
+altera_epcq_controller_driver_C_LIB_SRCS := \
+	$(altera_epcq_controller_driver_SRCS_ROOT)/src/altera_epcq_controller.c
+
 # altera_nios2_gen2_hal_driver sources root 
 altera_nios2_gen2_hal_driver_SRCS_ROOT := HAL
 
@@ -328,7 +336,9 @@ hal_C_LIB_SRCS := \
 
 # Assemble all component C source files 
 COMPONENT_C_LIB_SRCS += \
+	$(Altera_UP_SD_Card_Avalon_Interface_driver_C_LIB_SRCS) \
 	$(altera_avalon_jtag_uart_driver_C_LIB_SRCS) \
+	$(altera_epcq_controller_driver_C_LIB_SRCS) \
 	$(altera_nios2_gen2_hal_driver_C_LIB_SRCS) \
 	$(avalon_character_lcd_driver_C_LIB_SRCS) \
 	$(hal_C_LIB_SRCS)
