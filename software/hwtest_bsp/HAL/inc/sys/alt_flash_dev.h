@@ -3,7 +3,7 @@
 *                                                                             *
 * License Agreement                                                           *
 *                                                                             *
-* Copyright (c) 2004 Altera Corporation, San Jose, California, USA.           *
+* Copyright (c) 2015 Altera Corporation, San Jose, California, USA.           *
 * All rights reserved.                                                        *
 *                                                                             *
 * Permission is hereby granted, free of charge, to any person obtaining a     *
@@ -77,6 +77,7 @@ typedef int (*alt_flash_write_block)( alt_flash_dev* flash, int block_offset,
 typedef int (*alt_flash_erase_block)( alt_flash_dev* flash, int offset);
 typedef int (*alt_flash_read)(alt_flash_dev* flash, int offset, 
                               void* dest_addr, int length );
+typedef int (*alt_flash_lock)(alt_flash_dev* flash, alt_u32 sectors_to_lock);						  
 
 struct alt_flash_dev
 {
@@ -93,6 +94,7 @@ struct alt_flash_dev
   int                       length;
   int                       number_of_regions;
   flash_region              region_info[ALT_MAX_NUMBER_OF_FLASH_REGIONS]; 
+  alt_flash_lock            lock;
 };
 
 #endif /* __ALT_FLASH_DEV_H__ */

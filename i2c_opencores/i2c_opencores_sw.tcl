@@ -3,10 +3,10 @@
 #
 
 # Create a new driver
-create_driver opencores_i2c_driver
+create_driver i2c_opencores_driver
 
 # Associate it with some hardware known as "opencores_i2c"
-set_sw_property hw_class_name opencores_i2c
+set_sw_property hw_class_name i2c_opencores
 
 # The version of this driver
 set_sw_property version 11.0
@@ -43,11 +43,11 @@ set_sw_property supported_interrupt_apis "legacy_interrupt_api enhanced_interrup
 #
 
 # C/C++ source files
-add_sw_property c_source HAL/src/opencores_i2c.c
+add_sw_property c_source HAL/src/i2c_opencores.c
 
 # Include files
-add_sw_property include_source HAL/inc/opencores_i2c.h
-add_sw_property include_source inc/opencores_i2c_regs.h
+add_sw_property include_source HAL/inc/i2c_opencores.h
+add_sw_property include_source inc/i2c_opencores_regs.h
 
 # This driver supports HAL & UCOSII BSP (OS) types
 add_sw_property supported_bsp_type HAL

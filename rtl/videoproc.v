@@ -23,6 +23,7 @@ module videoproc(
 	input clk50,
 	input [3:0] button,
 	input [17:0] switch,
+    input ir_rx,
 	inout scl,
 	inout sda,
 	output reset_n_TVP,
@@ -96,10 +97,12 @@ module videoproc(
 wire [7:0] led_out;
 wire [31:0] char_vec;
 wire [55:0] seg_vec;
+wire [31:0] ir_code;
 wire reset_n;
 wire [20:0] controls_in;
 wire [1:0] FID_ID;
 wire h_unstable;
+wire [1:0] fpga_vsyncgen;
 wire [2:0] pclk_lock;
 wire [2:0] pll_lock_lost;
 wire [31:0] h_info;
@@ -115,8 +118,9 @@ wire DATA_enable;
 assign reset_n_TVP = reset_n;
 assign LCD_BLON = 1'b1;
 
-assign LED_R[17:10] = led_out;
+assign LED_R[17:10] = 8'h00;
 assign LED_G[7:6] = FID_ID;		// Active FID (0 --- 1)
+assign LED_G[4] = (ir_code != 0);
 assign LED_G[2] = pclk_lock[2];
 assign LED_G[1] = pclk_lock[1];
 assign LED_G[0] = pclk_lock[0];
@@ -124,6 +128,7 @@ assign LED_R[2] = pll_lock_lost[2];
 assign LED_R[1] = pll_lock_lost[1];
 assign LED_R[0] = pll_lock_lost[0];
 assign LED_R[7:5] = {h_unstable, h_unstable, h_unstable};
+assign LED_R[4:3] = fpga_vsyncgen;
 
 assign HEX7 = seg_vec[55:49];
 assign HEX6 = seg_vec[48:42];
@@ -180,10 +185,16 @@ assign HDMI_TX_MCLK = 1'b0;
 assign HDMI_TX_DCLK = 1'b0;
 `endif
 
+reg clk25;
+always @(posedge clk50)
+begin
+	clk25 <= ~clk25;
+end
+
 sys sys_inst(
 	.clk_clk							(clk50),
 	.reset_reset_n						(reset_n),
-	.pio_0_error_leds_out_export		(led_out),
+	.pio_0_ir_code_in_export    		(ir_code),
 	.pio_1_controls_in_export   		({11'h000, controls_in}),
 	.pio_2_horizontal_info_out_export   (h_info),
 	.pio_3_vertical_info_out_export  	(v_info),
@@ -198,19 +209,20 @@ sys sys_inst(
 	.i2c_opencores_1_export_scl_pad_io	(),
 	.i2c_opencores_1_export_sda_pad_io	(),
 `endif
-    .character_lcd_0_external_interface_DATA (LCD_DATA), // character_lcd_0_external_interface.DATA
-    .character_lcd_0_external_interface_ON   (LCD_ON),   //                                   .ON
-    .character_lcd_0_external_interface_EN   (LCD_EN),   //                                   .EN
-    .character_lcd_0_external_interface_RS   (LCD_RS),   //                                   .RS
-    .character_lcd_0_external_interface_RW   (LCD_RW),   //                                   .RW
-	.character_lcd_0_external_interface_BLON (), 		 //                                   .BLON
-	.sdcard_0_interface_b_SD_cmd             (SD_CMD),    //                 sdcard_0_interface.b_SD_cmd
-	.sdcard_0_interface_b_SD_dat             (SD_DAT[0]), //                                   .b_SD_dat
-	.sdcard_0_interface_b_SD_dat3            (SD_DAT[3]), //                                   .b_SD_dat3
-	.sdcard_0_interface_o_SD_clock           (SD_CLK)     //                                   .o_SD_cloc
+    .character_lcd_0_external_interface_DATA (LCD_DATA), 	// character_lcd_0_external_interface.DATA
+    .character_lcd_0_external_interface_ON   (LCD_ON),   	//                                   .ON
+    .character_lcd_0_external_interface_EN   (LCD_EN),   	//                                   .EN
+    .character_lcd_0_external_interface_RS   (LCD_RS),   	//                                   .RS
+    .character_lcd_0_external_interface_RW   (LCD_RW),   	//                                   .RW
+	.character_lcd_0_external_interface_BLON (), 		 	//                                   .BLON
+	.sdcard_0_interface_b_SD_cmd             (SD_CMD),   	//                 sdcard_0_interface.b_SD_cmd
+	.sdcard_0_interface_b_SD_dat             (SD_DAT[0]),	//                                   .b_SD_dat
+	.sdcard_0_interface_b_SD_dat3            (SD_DAT[3]),	//                                   .b_SD_dat3
+	.sdcard_0_interface_o_SD_clock           (SD_CLK),   	//                                   .o_SD_clock
+	.clk_flashctrl_clk                       (clk25)    	//                                    clk_0.clk
 );
 
-scaler scaler_inst (
+scanconverter scanconverter_inst (
 	.HSYNC_in		(HSYNC_in),
 	.VSYNC_in		(VSYNC_in),
 	.PCLK_in		(PCLK_in),
@@ -229,9 +241,19 @@ scaler scaler_inst (
 	.DATA_enable	(DATA_enable),
 	.FID_ID			(FID_ID),
 	.h_unstable		(h_unstable),
+    .fpga_vsyncgen	(fpga_vsyncgen),
 	.pclk_lock  	(pclk_lock),
 	.pll_lock_lost	(pll_lock_lost),
 	.lines_out		(lines_out)
+);
+
+// TODO: check why this degrades hold times
+ir_rcv ir0 (
+	.clk50	    	(clk50),
+	.reset_n	    (reset_n),
+    .ir_rx          (ir_rx),
+    .ir_code        (ir_code),
+    .ir_code_ack    ()
 );
 
 genvar i;

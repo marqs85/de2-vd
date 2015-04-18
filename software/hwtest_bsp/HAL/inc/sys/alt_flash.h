@@ -4,7 +4,7 @@
 *                                                                             *
 * License Agreement                                                           *
 *                                                                             *
-* Copyright (c) 2004 Altera Corporation, San Jose, California, USA.           *
+* Copyright (c) 2015 Altera Corporation, San Jose, California, USA.           *
 * All rights reserved.                                                        *
 *                                                                             *
 * Permission is hereby granted, free of charge, to any person obtaining a     *
@@ -64,6 +64,19 @@ extern "C"
 
 alt_flash_fd* alt_flash_open_dev(const char* name);
 void alt_flash_close_dev(alt_flash_fd* fd );
+
+/*
+ *  alt_flash_lock
+ *
+ *  Locks the range of the memory sectors, which 
+ *  protected from write and erase.
+ *
+ */
+static __inline__ int __attribute__ ((always_inline)) alt_lock_flash( 
+                                      alt_flash_fd* fd, alt_u32 sectors_to_lock)
+{
+  return fd->lock( fd, sectors_to_lock);
+}
 
 /*
  *  alt_write_flash

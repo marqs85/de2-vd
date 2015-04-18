@@ -42,7 +42,7 @@ extern "C"
 #endif /* __cplusplus */
 
 #ifndef SYSTEM_BUS_WIDTH
-#error SYSTEM_BUS_WIDTH undefined
+#define SYSTEM_BUS_WIDTH 32
 #endif
 
 /* Dynamic bus access functions */

@@ -22,10 +22,7 @@
 
 #include "tvp7002_regs.h"
 #include "video_modes.h"
-
-#ifndef DEBUG
-#define printf(...)
-#endif
+#include "sysconfig.h"
 
 //#define I2C_DEBUG
 #define I2CA_BASE I2C_OPENCORES_0_BASE
@@ -44,6 +41,19 @@ typedef enum {
 	REFCLK_INTCLK 	= 1
 } tvp_refclk_t;
 
+typedef struct {
+	const char *name;
+	alt_u16 R_Y;
+	alt_u16 R_Pb;
+	alt_u16 R_Pr;
+	alt_u16 G_Y;
+	alt_u16 G_Pb;
+	alt_u16 G_Pr;
+	alt_u16 B_Y;
+	alt_u16 B_Pb;
+	alt_u16 B_Pr;
+} ypbpr_to_rgb_csc_t;
+
 static const alt_u32 clkrate[] = {27000000, 6500000}; //in MHz
 
 
@@ -57,11 +67,19 @@ inline void tvp_disable_output();
 
 inline void tvp_enable_output();
 
-void tvp_set_globaldefs();
+void tvp_init();
 
 void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, alt_u8 hz, alt_u8 plldivby2);
 
 void tvp_sel_clk(alt_u8 refclk);
+
+void tvp_sel_csc(ypbpr_to_rgb_csc_t *csc);
+
+void tvp_set_lpf(alt_u8 val);
+
+void tvp_set_sync_lpf(alt_u8 val);
+
+void tvp_set_hpll_phase(alt_u8 val);
 
 void tvp_source_setup(alt_8 modeid, alt_u32 vlines, alt_u8 hz, alt_u8 refclk);
 

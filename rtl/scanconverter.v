@@ -17,16 +17,28 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+`define TRUE                    1'b1
+`define FALSE                   1'b0
+`define HI                      1'b1
+`define LO                      1'b0
+
 `define LINEMULT_DISABLE		2'h0
-`define LINEMULT_DOUBLE			2'h2
-`define LINEMULT_TRIPLE			2'h3
+`define LINEMULT_DOUBLE			2'h1
+`define LINEMULT_TRIPLE			2'h2
 
 `define LINETRIPLE_M0			2'h0
 `define LINETRIPLE_M1			2'h1
 `define LINETRIPLE_M2			2'h2
 `define LINETRIPLE_M3			2'h3
 
-module scaler(
+`define VSYNCGEN_LEN            6
+`define VSYNCGEN_GENMID_BIT     0
+`define VSYNCGEN_CHOPMID_BIT    1
+
+`define FID_EVEN                1'b0
+`define FID_ODD                 1'b1
+
+module scanconverter (
 	input [7:0] R_in,
 	input [7:0] G_in,
 	input [7:0] B_in,
@@ -45,6 +57,7 @@ module scaler(
 	output reg DATA_enable,
 	output [1:0] FID_ID,
 	output h_unstable,
+    output reg [1:0] fpga_vsyncgen,
 	output [2:0] pclk_lock,
 	output [2:0] pll_lock_lost,
 	output [10:0] lines_out
@@ -59,19 +72,23 @@ wire [1:0] slid_act;
 
 wire pclk_2x_lock, pclk_3x_lock, pclk_3x_lowfreq_lock;
 
-wire HSYNC_act;
+wire HSYNC_act, VSYNC_act;
 reg HSYNC_1x, HSYNC_2x, HSYNC_3x, HSYNC_3x_h1x, HSYNC_pp1;
-reg VSYNC_1x, VSYNC_pp1;
+reg VSYNC_1x, VSYNC_2x, VSYNC_pp1;
+
+reg [11:0] HSYNC_start;
 
 wire DATA_enable_act;
 reg DATA_enable_pp1;
+
+reg FID_prev;
 
 wire [11:0] linebuf_hoffset; //Offset for line (max. 2047 pixels), MSB indicates which line is read/written
 wire [11:0] hcnt_act;
 reg [11:0] hcnt_1x, hcnt_2x, hcnt_3x, hcnt_4x, hcnt_3x_h1x, hcnt_3x_h4x, hcnt_3x_h5x;
 
 wire [10:0] vcnt_act;
-reg [10:0] vcnt_1x, vcnt_2x, lines_1x, lines_2x; 		//max. 2047
+reg [10:0] vcnt_1x, vcnt_2x, vcnt_1x_tvp, lines_1x, lines_2x; 		//max. 2047
 reg [9:0] vcnt_3x, vcnt_3x_h1x, lines_3x, lines_3x_h1x; //max. 1023
 
 reg h_enable_3x_prev4x, h_enable_3x_prev3x_h4x, h_enable_3x_prev3x_h5x;
@@ -88,7 +105,6 @@ reg h_enable_2x, v_enable_2x;
 reg h_enable_3x, h_enable_3x_h1x, v_enable_3x, v_enable_3x_h1x;
 
 reg prev_hs, prev_vs;
-reg[2250:0] linebuf_hs[0:1]; //1080p is 2200 total
 reg [11:0] hmax[0:1];
 reg line_idx;
 
@@ -100,11 +116,13 @@ reg [10:0] V_ACTIVE;	//max. 2047
 reg [5:0] V_BACKPORCH;	//max. 63
 reg V_MISMODE;
 reg V_SCANLINES;
+reg V_SCANLINEDIR;
+reg V_SCANLINEID;
 reg [7:0] V_SCANLINESTR;
-reg [3:0] V_MASK;
+reg [5:0] V_MASK;
 reg [1:0] H_LINEMULT;
 reg [1:0] H_L3MODE;
-reg [3:0] H_MASK;
+reg [5:0] H_MASK;
 
 //8 bits per component -> 16.7M colors
 reg [7:0] R_1x, G_1x, B_1x, R_pp1, G_pp1, B_pp1;
@@ -129,12 +147,16 @@ assign FID_ID[0] = FID_in;
 //Scanline generation
 function [8:0] apply_scanlines;
     input enable;
+    input dir;
     input [8:0] data;
     input [8:0] str;
     input [1:0] actid;
     input [1:0] lineid;
+    input pixid;
     begin
-        if (enable & (actid == lineid))
+        if (enable & (dir == 1'b0) & (actid == lineid))
+            apply_scanlines = (data > str) ? (data-str) : 8'h00;
+        else if (enable & (dir == 1'b1) & (actid == pixid))
             apply_scanlines = (data > str) ? (data-str) : 8'h00;
         else
             apply_scanlines = data;
@@ -156,6 +178,7 @@ function [8:0] apply_mask;
             apply_mask = 8'h00;
         else
             apply_mask = data;
+        //apply_mask = (hoffset[0] ^ voffset[0]) ? 8'b11111111 : 8'b00000000;
     end
     endfunction
 
@@ -182,6 +205,7 @@ begin
 		DATA_enable_act = (h_enable_1x & v_enable_1x);
 		PCLK_out = pclk_out_1x;
 		HSYNC_act = HSYNC_1x;
+        VSYNC_act = VSYNC_1x;
 		lines_out = lines_1x;
 		linebuf_rdclock = 0;
 		linebuf_hoffset = 0;
@@ -197,6 +221,7 @@ begin
 		DATA_enable_act = (h_enable_2x & v_enable_2x);
 		PCLK_out = pclk_out_2x;
 		HSYNC_act = HSYNC_2x;
+        VSYNC_act = VSYNC_2x;
 		lines_out = lines_2x;
 		linebuf_rdclock = pclk_2x;
 		linebuf_hoffset = hcnt_2x;
@@ -209,6 +234,7 @@ begin
 		R_act = R_lbuf;
 		G_act = G_lbuf;
 		B_act = B_lbuf;
+        VSYNC_act = VSYNC_1x;
 		case (H_L3MODE)
 		`LINETRIPLE_M0: begin
 			DATA_enable_act = (h_enable_3x & v_enable_3x);
@@ -267,6 +293,7 @@ begin
 		DATA_enable_act = 0;
 		PCLK_out = 0;
 		HSYNC_act = 0;
+        VSYNC_act = VSYNC_1x;
 		lines_out = 0;
 		linebuf_rdclock = 0;
 		linebuf_hoffset = 0;
@@ -302,67 +329,16 @@ pll_3x_lowfreq pll_linetriple_lowfreq (
 	.locked ( pclk_3x_lowfreq_lock )
 );
 
-linebuf	linebuf_r (
-	.data ( R_1x ), //or R_in?
-	.rdaddress ( linebuf_hoffset + (~line_idx << 11) ),
-	.rdclock ( linebuf_rdclock ),
-	.wraddress ( hcnt_1x + (line_idx << 11) ),
-	.wrclock ( pclk_1x ),
-	.wren ( 1'b1 ),
-	.q ( R_lbuf )
-);
-
-linebuf	linebuf_g (
-	.data ( G_1x ), //or G_in?
-	.rdaddress ( linebuf_hoffset + (~line_idx << 11) ),
-	.rdclock ( linebuf_rdclock ),
-	.wraddress ( hcnt_1x + (line_idx << 11) ),
-	.wrclock ( pclk_1x ),
-	.wren ( 1'b1 ),
-	.q ( G_lbuf )
-);
-
-linebuf	linebuf_b (
-	.data ( B_1x ),	//or B_in?
-	.rdaddress ( linebuf_hoffset + (~line_idx << 11) ),
-	.rdclock ( linebuf_rdclock ),
-	.wraddress ( hcnt_1x + (line_idx << 11) ),
-	.wrclock ( pclk_1x ),
-	.wren ( 1'b1 ),
-	.q ( B_lbuf )
-);
-
 //TODO: add secondary buffers for interlaced signals with alternative field order
-/*linebuf	antibob_r (
-	.data ( R_out_2x ),
-	.rdaddress ( hcnt_2x + (~outline_idx << 11) + 2 ),
-	.rdclock ( pclk_2x ),
-	.wraddress ( hcnt_2x + (outline_idx << 11)  ),
-	.wrclock ( pclk_2x ),
+linebuf	linebuf_rgb (
+	.data ( {R_1x, G_1x, B_1x} ), //or *_in?
+	.rdaddress ( linebuf_hoffset + (~line_idx << 11) ),
+	.rdclock ( linebuf_rdclock ),
+	.wraddress ( hcnt_1x + (line_idx << 11) ),
+	.wrclock ( pclk_1x ),
 	.wren ( 1'b1 ),
-	.q ( R_out_2x_antibob )
+	.q ( {R_lbuf, G_lbuf, B_lbuf} )
 );
-
-linebuf	antibob_g (
-	.data ( G_out_2x ),
-	.rdaddress ( hcnt_2x + (~outline_idx << 11) + 2 ),
-	.rdclock ( pclk_2x ),
-	.wraddress ( hcnt_2x + (outline_idx << 11)  ),
-	.wrclock ( pclk_2x ),
-	.wren ( 1'b1 ),
-	.q ( G_out_2x_antibob )
-);
-
-linebuf	antibob_b (
-	.data ( B_out_2x ),
-	.rdaddress ( hcnt_2x + (~outline_idx << 11) + 2 ),
-	.rdclock ( pclk_2x ),
-	.wraddress ( hcnt_2x + (outline_idx << 11) ),
-	.wrclock ( pclk_2x ),
-	.wren ( 1'b1 ),
-	.q ( B_out_2x_antibob )
-);*/
-
 
 //Postprocess pipeline
 always @(posedge pclk_act /*or negedge reset_n*/)
@@ -376,14 +352,14 @@ begin
 			G_pp1 <= apply_mask(1, G_act, hcnt_act, H_BACKPORCH+H_MASK, H_BACKPORCH+H_ACTIVE-H_MASK, vcnt_act, V_BACKPORCH+V_MASK, V_BACKPORCH+V_ACTIVE-V_MASK);
 			B_pp1 <= apply_mask(1, B_act, hcnt_act, H_BACKPORCH+H_MASK, H_BACKPORCH+H_ACTIVE-H_MASK, vcnt_act, V_BACKPORCH+V_MASK, V_BACKPORCH+V_ACTIVE-V_MASK);
 			HSYNC_pp1 <= HSYNC_act;
-			//VSYNC_pp1 <= VSYNC_act;
+			VSYNC_pp1 <= VSYNC_act;
 			DATA_enable_pp1 <= DATA_enable_act;
 			
-			R_out <= apply_scanlines(V_SCANLINES, R_pp1, V_SCANLINESTR, 2'b00, slid_act);
-			G_out <= apply_scanlines(V_SCANLINES, G_pp1, V_SCANLINESTR, 2'b00, slid_act);
-			B_out <= apply_scanlines(V_SCANLINES, B_pp1, V_SCANLINESTR, 2'b00, slid_act);
+			R_out <= apply_scanlines(V_SCANLINES, V_SCANLINEDIR, R_pp1, V_SCANLINESTR, {1'b0, V_SCANLINEID}, slid_act, hcnt_act[0]);
+			G_out <= apply_scanlines(V_SCANLINES, V_SCANLINEDIR, G_pp1, V_SCANLINESTR, {1'b0, V_SCANLINEID}, slid_act, hcnt_act[0]);
+			B_out <= apply_scanlines(V_SCANLINES, V_SCANLINEDIR, B_pp1, V_SCANLINESTR, {1'b0, V_SCANLINEID}, slid_act, hcnt_act[0]);
 			HSYNC_out <= HSYNC_pp1;
-			//VSYNC_out <= VSYNC_pp1;
+			VSYNC_out <= VSYNC_pp1;
 			DATA_enable <= DATA_enable_pp1;
 		end
 end
@@ -435,12 +411,25 @@ begin
 					hmax[line_idx] <= hcnt_1x;
 					line_idx <= line_idx ^ 1'b1;
 					vcnt_1x <= vcnt_1x + 1'b1;
+                    vcnt_1x_tvp <= vcnt_1x_tvp + 1'b1;
 				end
 			else
 				begin
 					hcnt_1x <= hcnt_1x + 1'b1;
 				end
 
+            // detect non-interlaced signal with odd-odd field signaling (TVP7002 detects it as interlaced with analog sync inputs).
+            // FID is updated at leading edge of VSYNC, so trailing edge has the status of current field.
+            if ((prev_vs == `LO) & (VSYNC_in == `HI))
+                begin
+                    vcnt_1x_tvp <= 0;
+                    FID_prev <= FID_in;
+                    
+                    if (FID_in == FID_prev)
+                        fpga_vsyncgen[`VSYNCGEN_CHOPMID_BIT] <= 1'b0;
+                    else if (FID_in == `FID_EVEN)   // TVP7002 falsely indicates even field (vcnt < active_lines)
+                        fpga_vsyncgen[`VSYNCGEN_CHOPMID_BIT] <= (vcnt_1x_tvp < 200) ? 1'b1 : 1'b0;
+                end
 			
 			if ((prev_vs == 1'b0) & (VSYNC_in == 1'b1) & (V_MISMODE ? (FID_in == 1'b0) : 1'b1)) //should be checked at every pclk_1x?
 				begin
@@ -452,18 +441,23 @@ begin
 					H_BACKPORCH <= h_info[7:0];		// Horizontal backporch length from by the CPU - 8bits (0...255)
 					H_LINEMULT <= h_info[31:30];	// Horizontal line multiply mode
 					H_L3MODE <= h_info[29:28];		// Horizontal line triple mode
-					H_MASK <= h_info[11:8];
-					V_ACTIVE <= v_info[26:16];		// Vertical active length from by the CPU, 11bits (0...2047)
+					H_MASK <= {h_info[11:8], 2'b00};
+					V_ACTIVE <= v_info[23:13];		// Vertical active length from by the CPU, 11bits (0...2047)
 					V_BACKPORCH <= v_info[5:0];		// Vertical backporch length from by the CPU, 6bits (0...64)
 					V_MISMODE <= v_info[31];
-					V_SCANLINES <= v_info[30];
-					V_SCANLINESTR <= ((v_info[29:27]+8'h01)<<5)-1'b1;
-					V_MASK <= v_info[9:6];
+					V_SCANLINES <= v_info[29];
+                    V_SCANLINEDIR <= v_info[28];
+                    V_SCANLINEID <= v_info[27];
+					V_SCANLINESTR <= ((v_info[26:24]+8'h01)<<5)-1'b1;
+					V_MASK <= {v_info[9:6], 2'b00};
 				end
 				
 			prev_hs <= HSYNC_in;
 			prev_vs <= VSYNC_in;
-			linebuf_hs[line_idx][hcnt_1x] <= prev_hs;
+
+			// record start position of HSYNC
+			if ((prev_hs == 1'b1) & (HSYNC_in == 1'b0))
+				HSYNC_start <= hcnt_1x;
 			
 			R_1x <= R_in;
 			G_1x <= G_in;
@@ -472,7 +466,10 @@ begin
 
 			// Ignore possible invalid vsyncs generated by TVP7002
 			if (vcnt_1x > V_ACTIVE)
-				VSYNC_out <= VSYNC_in;
+				VSYNC_1x <= VSYNC_in;
+                
+            // Check if extra vsync needed
+			fpga_vsyncgen[`VSYNCGEN_GENMID_BIT] <= (lines_1x > ({1'b0, V_ACTIVE} << 1)) ? 1'b1 : 1'b0;
 			
 			h_enable_1x <= ((hcnt_1x >= H_BACKPORCH) & (hcnt_1x < H_BACKPORCH + H_ACTIVE));
 			v_enable_1x <= ((vcnt_1x >= V_BACKPORCH) & (vcnt_1x < V_BACKPORCH + V_ACTIVE));	//- FID_in ???
@@ -500,13 +497,31 @@ begin
 			if (hcnt_2x == 0)
 				vcnt_2x <= vcnt_2x + 1'b1;
 			
-			if ((pclk_1x == 1'b0) & (prev_vs == 1'b0) & (VSYNC_in == 1'b1) & (V_MISMODE ? (FID_in == 1'b0) : 1'b1)) //sync with posedge of pclk_1x
+            if ((pclk_1x == 1'b0) & (fpga_vsyncgen[`VSYNCGEN_GENMID_BIT] == 1'b1))
+                begin
+                    if ((prev_vs == 1'b0) & (VSYNC_in == 1'b1))
+                        vcnt_2x <= 0;
+                    else if (vcnt_2x == lines_1x)
+                        begin
+                            vcnt_2x <= 0;
+                            lines_2x <= vcnt_2x;
+                        end
+                end
+			else if ((pclk_1x == 1'b0) & (prev_vs == 1'b0) & (VSYNC_in == 1'b1) & (V_MISMODE ? (FID_in == 1'b0) : 1'b1)) //sync with posedge of pclk_1x
 				begin
 					vcnt_2x <= 0;
 					lines_2x <= vcnt_2x;
 				end
-				
-			HSYNC_2x <= linebuf_hs[~line_idx][hcnt_2x];
+                
+            if (pclk_1x == 1'b0)
+            begin
+                if (fpga_vsyncgen[`VSYNCGEN_GENMID_BIT] == 1'b1)
+                    VSYNC_2x <= (vcnt_2x >= lines_1x - `VSYNCGEN_LEN) ? 1'b0 : 1'b1;
+                else if (vcnt_1x > V_ACTIVE)
+                    VSYNC_2x <= VSYNC_in;
+            end
+
+			HSYNC_2x <= ~(hcnt_2x >= HSYNC_start);
 			//TODO: VSYNC_2x
 			h_enable_2x <= ((hcnt_2x >= H_BACKPORCH) & (hcnt_2x < H_BACKPORCH + H_ACTIVE));
 			v_enable_2x <= ((vcnt_2x >= (V_BACKPORCH<<1)) & (vcnt_2x < ((V_BACKPORCH + V_ACTIVE)<<1)));
@@ -537,7 +552,7 @@ begin
 					lines_3x <= vcnt_3x;
 				end
 				
-			HSYNC_3x <= linebuf_hs[~line_idx][hcnt_3x];
+			HSYNC_3x <= ~(hcnt_3x >= HSYNC_start);
 			//TODO: VSYNC_3x
 			h_enable_3x <= ((hcnt_3x >= H_BACKPORCH) & (hcnt_3x < H_BACKPORCH + H_ACTIVE));
 			v_enable_3x <= ((vcnt_3x >= (3*V_BACKPORCH)) & (vcnt_3x < (3*(V_BACKPORCH + V_ACTIVE))));	//multiplier generated!!!
@@ -596,7 +611,7 @@ begin
 					lines_3x_h1x <= vcnt_3x_h1x;
 				end
 				
-			HSYNC_3x_h1x <= linebuf_hs[~line_idx][hcnt_3x_h1x];
+			HSYNC_3x_h1x <= ~(hcnt_3x_h1x >= HSYNC_start);
 			//TODO: VSYNC_3x_h1x
 			h_enable_3x_h1x <= ((hcnt_3x_h1x >= H_BACKPORCH) & (hcnt_3x_h1x < H_BACKPORCH + H_ACTIVE));
 			v_enable_3x_h1x <= ((vcnt_3x_h1x >= (3*V_BACKPORCH)) & (vcnt_3x_h1x < (3*(V_BACKPORCH + V_ACTIVE))));	//multiplier generated!!!

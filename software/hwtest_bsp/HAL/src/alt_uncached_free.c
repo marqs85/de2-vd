@@ -48,6 +48,6 @@ alt_uncached_free(volatile void* ptr)
 #endif /* No address mask option enabled. */
 #else /* No data cache */
   /* Nothing needs to be done to the pointer. */
-  free(ptr);
+  free((void*)ptr);
 #endif /* No data cache */
 }

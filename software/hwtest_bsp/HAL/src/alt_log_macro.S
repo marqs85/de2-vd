@@ -39,8 +39,12 @@ tx_next_char:
 
 	/* check device transmit ready  */
 wait_tx_ready_loop:
-        ldwio   r5, ALT_LOG_PRINT_REG_OFFSET(r6)
-        andi    r5, r5, ALT_LOG_PRINT_MSK
+        ldwio   r8, ALT_LOG_PRINT_REG_OFFSET(r6)
+        /*UART, ALT_LOG_PRINT_MSK == 0x40
+          JTAG UART, ALT_LOG_PRINT_MSK == 0xFFFF0000 */
+        andhi   r5, r8, %hi(ALT_LOG_PRINT_MSK)
+        andi    r8, r8, %lo(ALT_LOG_PRINT_MSK)
+        or      r5, r5, r8
         beq     r5, r0, wait_tx_ready_loop	
 	/* write char */
 	stwio   r7, ALT_LOG_PRINT_TXDATA_REG_OFFSET (r6)		

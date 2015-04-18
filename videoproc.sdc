@@ -2,7 +2,9 @@
 
 create_clock -period 50MHz -name clk50 [get_ports clk50]
 
-set_input_delay -clock clk50 0 [get_ports {button* switch* sda scl LCD_DATA* HDMI_TX_PCSDA SD_* *ALTERA_DATA0}]
+set_input_delay -clock clk50 0 [get_ports {button* switch* sda scl ir_rx LCD_DATA* HDMI_TX_PCSDA SD_* *ALTERA_DATA0}]
+
+create_generated_clock -divide_by 2 -source [get_ports clk50] -name clk25 [get_registers clk25]
 
 
 ### Scaler clock constraints ###
@@ -15,14 +17,14 @@ create_clock -period 6.7MHz -name pclk_ldtv_M2 [get_ports PCLK_in] -add
 create_clock -period 5.4MHz -name pclk_ldtv_M3 [get_ports PCLK_in] -add
 
 #derive_pll_clocks
-create_generated_clock -master_clock pclk_sdtv -source {scaler_inst|pll_linedouble|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 2 -duty_cycle 50.00 -name pclk_2x {scaler_inst|pll_linedouble|altpll_component|auto_generated|pll1|clk[0]}
-create_generated_clock -master_clock pclk_ldtv_hs_M0 -source {scaler_inst|pll_linetriple|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_M0 {scaler_inst|pll_linetriple|altpll_component|auto_generated|pll1|clk[0]}
-create_generated_clock -master_clock pclk_ldtv_hs_M1 -source {scaler_inst|pll_linetriple|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_M1 {scaler_inst|pll_linetriple|altpll_component|auto_generated|pll1|clk[0]} -add
-create_generated_clock -master_clock pclk_ldtv_hs_M1 -source {scaler_inst|pll_linetriple|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 4 -duty_cycle 50.00 -name pclk_4x_M1 {scaler_inst|pll_linetriple|altpll_component|auto_generated|pll1|clk[1]}
-create_generated_clock -master_clock pclk_ldtv_M2 -source {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_h1x_M2 {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[0]}
-create_generated_clock -master_clock pclk_ldtv_M2 -source {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 12 -duty_cycle 50.00 -name pclk_3x_h4x_M2 {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[1]}
-create_generated_clock -master_clock pclk_ldtv_M3 -source {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_h1x_M3 {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[0]} -add
-create_generated_clock -master_clock pclk_ldtv_M3 -source {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 15 -duty_cycle 50.00 -name pclk_3x_h5x_M3 {scaler_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[2]}
+create_generated_clock -master_clock pclk_sdtv -source {scanconverter_inst|pll_linedouble|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 2 -duty_cycle 50.00 -name pclk_2x {scanconverter_inst|pll_linedouble|altpll_component|auto_generated|pll1|clk[0]}
+create_generated_clock -master_clock pclk_ldtv_hs_M0 -source {scanconverter_inst|pll_linetriple|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_M0 {scanconverter_inst|pll_linetriple|altpll_component|auto_generated|pll1|clk[0]}
+create_generated_clock -master_clock pclk_ldtv_hs_M1 -source {scanconverter_inst|pll_linetriple|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_M1 {scanconverter_inst|pll_linetriple|altpll_component|auto_generated|pll1|clk[0]} -add
+create_generated_clock -master_clock pclk_ldtv_hs_M1 -source {scanconverter_inst|pll_linetriple|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 4 -duty_cycle 50.00 -name pclk_4x_M1 {scanconverter_inst|pll_linetriple|altpll_component|auto_generated|pll1|clk[1]}
+create_generated_clock -master_clock pclk_ldtv_M2 -source {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_h1x_M2 {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[0]}
+create_generated_clock -master_clock pclk_ldtv_M2 -source {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 12 -duty_cycle 50.00 -name pclk_3x_h4x_M2 {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[1]}
+create_generated_clock -master_clock pclk_ldtv_M3 -source {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 3 -duty_cycle 50.00 -name pclk_3x_h1x_M3 {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[0]} -add
+create_generated_clock -master_clock pclk_ldtv_M3 -source {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|inclk[0]} -multiply_by 15 -duty_cycle 50.00 -name pclk_3x_h5x_M3 {scanconverter_inst|pll_linetriple_lowfreq|altpll_component|auto_generated|pll1|clk[2]}
 
 derive_clock_uncertainty
 
@@ -59,7 +61,7 @@ set_output_delay -reference_pin HDMI_TX_PCLK -clock pclk_3x_h5x_M3 0 $critoutput
 set_false_path -to [remove_from_collection [all_outputs] [concat $critoutputs_vga $critoutputs_hdmi]]
 
 
-### CPU/scaler clock relations ###
+### CPU/scanconverter clock relations ###
 
 # Set pixel clocks as exclusive clocks
 set_clock_groups -exclusive \
@@ -74,17 +76,17 @@ set_clock_groups -exclusive \
 set_clock_groups -asynchronous -group {clk50}
 
 # Filter out impossible output mux combinations
-set clkmuxregs [get_cells {scaler:scaler_inst|R_out[*] scaler:scaler_inst|G_out[*] scaler:scaler_inst|B_out[*] scaler:scaler_inst|HSYNC_out scaler:scaler_inst|DATA_enable scaler:scaler_inst|*_pp1*}]
-set clkmuxnodes [get_pins {scaler_inst|linebuf_*|altsyncram_*|auto_generated|ram_*|portbaddr*}]
+set clkmuxregs [get_cells {scanconverter:scanconverter_inst|R_out[*] scanconverter:scanconverter_inst|G_out[*] scanconverter:scanconverter_inst|B_out[*] scanconverter:scanconverter_inst|HSYNC_out scanconverter:scanconverter_inst|DATA_enable scanconverter:scanconverter_inst|*_pp1*}]
+set clkmuxnodes [get_pins {scanconverter_inst|linebuf_*|altsyncram_*|auto_generated|ram_*|portbaddr*}]
 set_false_path -from [get_clocks {pclk_ldtv* pclk_sdtv}] -through $clkmuxregs
-set_false_path -from pclk_3x_M1 -through [remove_from_collection $clkmuxregs {scaler:scaler_inst|DATA_enable_pp1* scaler:scaler_inst|HSYNC_pp1*}] -to pclk_4x_M1
+set_false_path -from pclk_3x_M1 -through [remove_from_collection $clkmuxregs {scanconverter:scanconverter_inst|DATA_enable_pp1* scanconverter:scanconverter_inst|HSYNC_pp1*}] -to pclk_4x_M1
 set_false_path -from pclk_3x_M1 -through $clkmuxnodes -to pclk_4x_M1
 
 # Ignore paths from registers which are updated only at the end of vsync
-set_false_path -from [get_cells {scaler_inst|H_* scaler_inst|V_* scaler:scaler_inst|lines_*}]
+set_false_path -from [get_cells {scanconverter_inst|H_* scanconverter_inst|V_* scanconverter:scanconverter_inst|lines_*}]
 
 # Ignore paths from registers which are updated only at the end of hsync
-set_false_path -from [get_cells {scaler:scaler_inst|vcnt_* scaler:scaler_inst|line_idx}]
+set_false_path -from [get_cells {scanconverter:scanconverter_inst|vcnt_* scanconverter:scanconverter_inst|line_idx}]
 
 # Ignore following clock transfers
 set_false_path -from [get_clocks pclk_2x] -to [get_clocks pclk_sdtv]

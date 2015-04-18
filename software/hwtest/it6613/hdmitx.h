@@ -53,14 +53,7 @@
 
 //typedef unsigned char bool;
 #include "Altera_UP_SD_Card_Avalon_Interface.h"
-
-#ifndef DEBUG
-#define OS_PRINTF(...)
-#define ErrorF(...)
-#else
-#define OS_PRINTF printf
-#define ErrorF printf
-#endif
+#include "sysconfig.h"
 
 // Hardwired to CPU reset
 #define HDMITX_Reset(x)

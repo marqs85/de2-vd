@@ -341,7 +341,9 @@ void InitIT6613()
 	//////////////////////////////////////////////////////////////////
 	// Setup HDCP ROM
 	//////////////////////////////////////////////////////////////////
+#ifdef SUPPORT_HDCP
 	InitIT6613_HDCPROM() ;
+#endif
 // #ifdef EXTERN_HDCPROM
 // #pragma message("EXTERN ROM CODED") ;
 // 	HDMITX_WriteI2C_Byte(REG_TX_ROM_HEADER,0xA0) ;

@@ -142,7 +142,6 @@ ACDS_VERSION := 13.1
 ELF := hwtest.elf
 
 # Paths to C, C++, and assembly source files.
-C_SRCS += i2c_opencores.c
 C_SRCS += av_controller.c
 C_SRCS += it6613/hdmitx_nios2.c
 C_SRCS += it6613/it6613.c
@@ -152,6 +151,7 @@ C_SRCS += tvp7002/video_modes.c
 C_SRCS += it6613/HDMI_TX.c
 C_SRCS += it6613/it6613_sys.c
 C_SRCS += it6613/EDID.c
+C_SRCS += char_lcd/lcd.c
 CXX_SRCS :=
 ASM_SRCS :=
 
@@ -169,12 +169,12 @@ CREATE_ELF_DERIVED_FILES := 0
 CREATE_LINKER_MAP := 1
 
 # Common arguments for ALT_CFLAGSs
-APP_CFLAGS_DEFINED_SYMBOLS := -DNO_I2C_DEBUG -DHDMITX -DNODEBUG
+APP_CFLAGS_DEFINED_SYMBOLS := -DNO_I2C_DEBUG -DNO_DVI_INIT -DHDMITX -DNO_DEBUG
 APP_CFLAGS_UNDEFINED_SYMBOLS :=
 APP_CFLAGS_OPTIMIZATION := -Os
 APP_CFLAGS_DEBUG_LEVEL :=
 APP_CFLAGS_WARNINGS := -Wall
-APP_CFLAGS_USER_FLAGS := -fdata-sections -ffunction-sections
+APP_CFLAGS_USER_FLAGS := -fdata-sections -ffunction-sections -fshort-enums
 
 APP_ASFLAGS_USER :=
 APP_LDFLAGS_USER := -Wl,--gc-sections
@@ -189,10 +189,10 @@ SYS_LIB :=
 BSP_ROOT_DIR := ../hwtest_bsp/
 
 # List of application specific include directories, library directories and library names
-APP_INCLUDE_DIRS += ../../i2c_opencores/HAL/inc
-APP_INCLUDE_DIRS += ../../i2c_opencores/inc
 APP_INCLUDE_DIRS += it6613
 APP_INCLUDE_DIRS += tvp7002
+APP_INCLUDE_DIRS += ./
+APP_INCLUDE_DIRS += char_lcd
 APP_LIBRARY_DIRS :=
 APP_LIBRARY_NAMES :=
 

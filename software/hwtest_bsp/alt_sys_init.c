@@ -4,7 +4,7 @@
  * Machine generated for CPU 'nios2_qsys_0' in SOPC Builder design 'sys'
  * SOPC Builder design path: ../../sys.sopcinfo
  *
- * Generated: Tue Apr 07 22:22:13 EEST 2015
+ * Generated: Sun Jun 21 23:41:42 EEST 2015
  */
 
 /*
@@ -63,6 +63,7 @@
 #include "altera_avalon_jtag_uart.h"
 #include "altera_epcq_controller.h"
 #include "altera_up_avalon_character_lcd.h"
+#include "i2c_opencores.h"
 
 /*
  * Allocate the device storage
@@ -73,6 +74,8 @@ ALTERA_AVALON_JTAG_UART_INSTANCE ( JTAG_UART_0, jtag_uart_0);
 ALTERA_EPCQ_CONTROLLER_AVL_MEM_AVL_CSR_INSTANCE ( EPCQ_CONTROLLER_0, EPCQ_CONTROLLER_0_AVL_MEM, EPCQ_CONTROLLER_0_AVL_CSR, epcq_controller_0);
 ALTERA_UP_AVALON_CHARACTER_LCD_INSTANCE ( CHARACTER_LCD_0, character_lcd_0);
 ALTERA_UP_SD_CARD_AVALON_INTERFACE_INSTANCE ( ALTERA_UP_SD_CARD_AVALON_INTERFACE_0, Altera_UP_SD_Card_Avalon_Interface_0);
+I2C_OPENCORES_INSTANCE ( I2C_OPENCORES_0, i2c_opencores_0);
+I2C_OPENCORES_INSTANCE ( I2C_OPENCORES_1, i2c_opencores_1);
 
 /*
  * Initialize the interrupt controller devices
@@ -99,4 +102,6 @@ void alt_sys_init( void )
     ALTERA_EPCQ_CONTROLLER_INIT ( EPCQ_CONTROLLER_0, epcq_controller_0);
     ALTERA_UP_AVALON_CHARACTER_LCD_INIT ( CHARACTER_LCD_0, character_lcd_0);
     ALTERA_UP_SD_CARD_AVALON_INTERFACE_INIT ( ALTERA_UP_SD_CARD_AVALON_INTERFACE_0, Altera_UP_SD_Card_Avalon_Interface_0);
+    I2C_OPENCORES_INIT ( I2C_OPENCORES_0, i2c_opencores_0);
+    I2C_OPENCORES_INIT ( I2C_OPENCORES_1, i2c_opencores_1);
 }

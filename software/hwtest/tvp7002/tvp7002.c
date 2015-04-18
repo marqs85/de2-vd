@@ -21,8 +21,6 @@
 #include <unistd.h>
 #include "system.h"
 #include "altera_avalon_pio_regs.h"
-#include "altera_up_avalon_character_lcd.h"
-#include "Altera_UP_SD_Card_Avalon_Interface.h"
 #include "i2c_opencores.h"
 #include "tvp7002.h"
 
@@ -30,6 +28,17 @@
 //#define EXTADCCLK		// Use external ADC clock (external osc)
 //#define ADCPOWERDOWN	// Power-down ADCs
 //#define PLLPOSTDIV	// Double-rate PLL with div-by-2 (decrease jitter?)
+
+/* Y'Pb'Pr' to R'G'B' CSC coefficients.
+ *
+ * Coefficients from "Colour Space Conversions" (http://www.poynton.com/PDFs/coloureq.pdf).
+ */
+const ypbpr_to_rgb_csc_t csc_coeffs[] = {
+	{ "Rec. 601", 0x2000, 0x0000, 0x2CE5, 0x2000, 0xF4FD, 0xE926, 0x2000, 0x38BC, 0x0000 },	// eq. 101
+	{ "Rec. 709", 0x2000, 0x0000, 0x323E, 0x2000, 0xFA04, 0xF113, 0x2000, 0x3B61, 0x0000 },	// eq. 105
+};
+
+extern mode_data_t video_modes[];
 
 static inline void tvp_set_hpllcoast(alt_u8 pre, alt_u8 post) {
 	tvp_writereg(TVP_HPLLPRECOAST, pre);
@@ -141,7 +150,12 @@ inline void tvp_enable_output() {
 	usleep(100000);
 }
 
-void tvp_set_globaldefs() {
+void tvp_init() {
+	// disable output
+	tvp_disable_output();
+
+	//Set global defaults
+
 	// Hsync input->output delay (horizontal shift)
 	// Default is 13, which maintains alignment of RGB and hsync at output
 	//tvp_writereg(TVP_HSOUTSTART, 0);
@@ -149,31 +163,15 @@ void tvp_set_globaldefs() {
 	// Hsync edge->Vsync edge delay
 	tvp_writereg(TVP_VSOUTALIGN, 0);
 
-	/* Y'Pb'Pr' to R'G'B' CSC coefficients.
-	 *
-	 * Coefficients from "Colour Space Conversions" (http://www.poynton.com/PDFs/coloureq.pdf), eq. 74.
-	 * TODO: Should we use eq. 111/101 for SD, and eq. 105 for HD?
-	 */
-	tvp_writereg(TVP_CSC1HI, 0x20);
-	tvp_writereg(TVP_CSC1LO, 0x00);
-	tvp_writereg(TVP_CSC2HI, 0xF3);
-	tvp_writereg(TVP_CSC2LO, 0x54);
-	tvp_writereg(TVP_CSC3HI, 0xED);
-	tvp_writereg(TVP_CSC3LO, 0x68);
+	// Set default CSC coeffs.
+	tvp_sel_csc(&csc_coeffs[0]);
 
-	tvp_writereg(TVP_CSC4HI, 0x20);
-	tvp_writereg(TVP_CSC4LO, 0x00);
-	tvp_writereg(TVP_CSC5HI, 0x00);
-	tvp_writereg(TVP_CSC5LO, 0x00);
-	tvp_writereg(TVP_CSC6HI, 0x24);
-	tvp_writereg(TVP_CSC6LO, 0x7B);
+	// Set default phase
+	tvp_set_hpll_phase(0x10);
 
-	tvp_writereg(TVP_CSC7HI, 0x20);
-	tvp_writereg(TVP_CSC7LO, 0x00);
-	tvp_writereg(TVP_CSC8HI, 0x40);
-	tvp_writereg(TVP_CSC8LO, 0xEE);
-	tvp_writereg(TVP_CSC9HI, 0x00);
-	tvp_writereg(TVP_CSC9LO, 0x00);
+	// Set min LPF
+	tvp_set_lpf(0);
+	tvp_set_sync_lpf(0);
 
 	// Increase line length tolerance
 	tvp_writereg(TVP_LINELENTOL, 0x06);
@@ -188,12 +186,14 @@ void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, alt_u8 hz, alt_u8 pll
 	alt_u8 vco_range;
 	alt_u8 cp_current;
 
+	alt_u8 status = tvp_readreg(TVP_HPLLPHASE) & 0xF8;
+
 	// Enable PLL post-div-by-2 with double samplerate
 	if (plldivby2) {
-		tvp_writereg(TVP_HPLLPHASE, 0x81);
+		tvp_writereg(TVP_HPLLPHASE, status|1);
 		h_samplerate = 2*h_samplerate;
 	} else {
-		tvp_writereg(TVP_HPLLPHASE, 0x80);
+		tvp_writereg(TVP_HPLLPHASE, status);
 	}
 
 	tvp_writereg(TVP_HPLLDIV_MSB, (h_samplerate >> 4));
@@ -222,16 +222,59 @@ void tvp_setup_hpll(alt_u16 h_samplerate, alt_u16 v_lines, alt_u8 hz, alt_u8 pll
 }
 
 void tvp_sel_clk(alt_u8 refclk) {
+	alt_u8 status = tvp_readreg(TVP_INPMUX2) & 0xFA;
+
 	//TODO: set SOG and CLP LPF based on mode
 	if (refclk == REFCLK_INTCLK) {
-		tvp_writereg(TVP_INPMUX2, 0xD2);
+		tvp_writereg(TVP_INPMUX2, status|0x2);
 	} else {
 #ifdef EXTADCCLK
-		tvp_writereg(TVP_INPMUX2, 0xD8);
+		tvp_writereg(TVP_INPMUX2, status|0x8);
 #else
-		tvp_writereg(TVP_INPMUX2, 0xDA);
+		tvp_writereg(TVP_INPMUX2, status|0xA);
 #endif
 	}
+}
+
+void tvp_sel_csc(ypbpr_to_rgb_csc_t *csc) {
+	tvp_writereg(TVP_CSC1HI, (csc->G_Y >> 8));
+	tvp_writereg(TVP_CSC1LO, (csc->G_Y & 0xff));
+	tvp_writereg(TVP_CSC2HI, (csc->G_Pb >> 8));
+	tvp_writereg(TVP_CSC2LO, (csc->G_Pb & 0xff));
+	tvp_writereg(TVP_CSC3HI, (csc->G_Pr >> 8));
+	tvp_writereg(TVP_CSC3LO, (csc->G_Pr & 0xff));
+
+	tvp_writereg(TVP_CSC4HI, (csc->R_Y >> 8));
+	tvp_writereg(TVP_CSC4LO, (csc->R_Y & 0xff));
+	tvp_writereg(TVP_CSC5HI, (csc->R_Pb >> 8));
+	tvp_writereg(TVP_CSC5LO, (csc->R_Pb & 0xff));
+	tvp_writereg(TVP_CSC6HI, (csc->R_Pr >> 8));
+	tvp_writereg(TVP_CSC6LO, (csc->R_Pr & 0xff));
+
+	tvp_writereg(TVP_CSC7HI, (csc->B_Y >> 8));
+	tvp_writereg(TVP_CSC7LO, (csc->B_Y & 0xff));
+	tvp_writereg(TVP_CSC8HI, (csc->B_Pb >> 8));
+	tvp_writereg(TVP_CSC8LO, (csc->B_Pb & 0xff));
+	tvp_writereg(TVP_CSC9HI, (csc->B_Pr >> 8));
+	tvp_writereg(TVP_CSC9LO, (csc->B_Pr & 0xff));
+}
+
+void tvp_set_lpf(alt_u8 val) {
+	alt_u8 status = tvp_readreg(TVP_VIDEOBWLIM) & 0xF0;
+	tvp_writereg(TVP_VIDEOBWLIM, status|val);
+	printf("LPF value set to 0x%x\n", val);
+}
+
+void tvp_set_sync_lpf(alt_u8 val) {
+	alt_u8 status = tvp_readreg(TVP_INPMUX2) & 0x3F;
+	tvp_writereg(TVP_INPMUX2, status|((3-val)<<6));
+	printf("Sync LPF value set to 0x%x\n", (3-val));
+}
+
+void tvp_set_hpll_phase(alt_u8 val) {
+	alt_u8 status = tvp_readreg(TVP_HPLLPHASE) & 0x07;
+	tvp_writereg(TVP_HPLLPHASE, (val<<3)|status);
+	printf("Phase value set to 0x%x\n", val);
 }
 
 void tvp_source_setup(alt_8 modeid, alt_u32 vlines, alt_u8 hz, alt_u8 refclk) {
@@ -244,13 +287,18 @@ void tvp_source_setup(alt_8 modeid, alt_u32 vlines, alt_u8 hz, alt_u8 refclk) {
 	tvp_set_clamp_position(type);
 	tvp_set_alc(type);
 
-	// Macrovision enable/disable, coast disable for RGBHV
+	// Macrovision enable/disable, coast disable for RGBHV.
+	// Coast needs to be enabled when HSYNC is missing during VSYNC. Valid only for RGBHV?
+	// Macrovision should be enabled when serration pulses etc. present, so disable only for RGBHV.
 	switch (type) {
 		case VIDEO_PC:
-			tvp_writereg(TVP_MISCCTRL4, 0x04);
+			//tvp_writereg(TVP_MISCCTRL4, 0x04);
+			tvp_writereg(TVP_MISCCTRL4, 0x0C);
+			tvp_writereg(TVP_MVSWIDTH, 0x03);
 		  break;
 		case VIDEO_HDTV:
-			tvp_writereg(TVP_MISCCTRL4, 0x00);
+			tvp_writereg(TVP_MISCCTRL4, 0x08);
+			tvp_writereg(TVP_MVSWIDTH, 0x0E);
 		  break;
 		case VIDEO_LDTV:
 		case VIDEO_SDTV:
@@ -294,9 +342,9 @@ void tvp_source_sel(tvp_input_t input, video_format fmt, alt_u8 refclk) {
 
 		sync_status = tvp_readreg(TVP_SYNCSTAT);
 		if (sync_status & (1<<7))
-			printf("Hsync detected, %s polarity\n", (sync_status & (1<<5)) ? "pos" : "neg");
+			printf("%s detected, %s polarity\n", (sync_status & (1<<3)) ? "Csync" : "Hsync", (sync_status & (1<<5)) ? "pos" : "neg");
 		if (sync_status & (1<<4))
-			printf("Vsync detected, %s polarity %s\n", (sync_status & (1<<2)) ? "pos" : "neg", (sync_status & (1<<3)) ? "(extracted from CSYNC)" : "");
+			printf("Vsync detected, %s polarity\n", (sync_status & (1<<2)) ? "pos" : "neg");
 	} else {
 		tvp_writereg(TVP_SYNCCTRL1, 0x5B);
 		sync_status = tvp_readreg(TVP_SYNCSTAT);
@@ -332,7 +380,8 @@ alt_u8 tvp_check_sync(tvp_input_t input) {
 	sync_status = tvp_readreg(TVP_SYNCSTAT);
 
 	if (input == TVP_INPUT2)
-		return !!((sync_status & 0x90) == 0x90);
+		return !!((sync_status & 0x98) > 0x80);
+		//return !!((sync_status & 0x90) == 0x90);
 	else
 		return !!(sync_status & (1<<1));
 }
